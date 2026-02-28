@@ -337,6 +337,28 @@
         <input class="form-input" type="text" id="fieldPseudo" placeholder="Ton pseudo sur le serveur">
         <div class="form-error" id="errPseudo">Ce champ est requis</div>
       </div>
+
+      <!-- CODE PROMO -->
+      <div style="background:rgba(88,101,242,.08);border:1px solid rgba(88,101,242,.25);border-radius:10px;padding:14px 16px;margin-top:4px;">
+        <div class="form-label" style="margin-bottom:8px;">🎟️ Code de réduction</div>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" type="text" id="promoInput" placeholder="Entre ton code ici" style="margin:0;text-transform:uppercase;">
+          <button onclick="applyPromo()" style="background:var(--accent);color:#fff;border:none;padding:0 18px;border-radius:8px;font-family:Rajdhani,sans-serif;font-weight:700;font-size:1rem;cursor:pointer;white-space:nowrap;">Appliquer</button>
+        </div>
+        <div id="promoMsg" style="margin-top:8px;font-size:.82rem;display:none;"></div>
+        <div id="promoResult" style="margin-top:10px;display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:10px 12px;">
+          <div style="display:flex;justify-content:space-between;font-size:.88rem;color:var(--text2);">
+            <span>Sous-total</span><span id="promoSubtotal"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.88rem;color:var(--success);margin-top:4px;">
+            <span id="promoLabel">Réduction</span><span id="promoDiscount"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:Rajdhani,sans-serif;font-size:1.2rem;font-weight:700;color:var(--coin);margin-top:8px;border-top:1px solid rgba(46,204,113,.2);padding-top:8px;">
+            <span>Total final</span><span id="promoFinal"></span>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="confirm-btn" id="confirmBtn" onclick="submitOrder()">
@@ -356,12 +378,72 @@
 
 <script>
 // ── CONFIG ──
-const PAYPAL_ME   = 'https://www.paypal.me/loan019';
-const EMAILJS_KEY = 'KGE5Bg3xYA62DWk0o';
-const EMAILJS_SVC = 'service_1xbmivp';
-const EMAILJS_TPL = 'template_acu3og6';
+const PAYPAL_ME     = 'https://www.paypal.me/loan019';
+const EMAILJS_KEY   = 'KGE5Bg3xYA62DWk0o';
+const EMAILJS_SVC   = 'service_1xbmivp';
+const EMAILJS_TPL   = 'template_acu3og6';
+const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1477270508931383296/_URj78lEourqq4VGs6uujxOkmc_2cHjYvqFQpVkgnydhXDgxNRhin-1FLv4llQOCHS-h';
 
 emailjs.init(EMAILJS_KEY);
+
+// ── CODES PROMO ──
+const PROMO_CODES = {
+  'LOAN34': { discount: 100, label: '-100% (Code Admin)' },
+};
+let appliedPromo = null;
+
+function applyPromo() {
+  const code = document.getElementById('promoInput').value.trim().toUpperCase();
+  const msg = document.getElementById('promoMsg');
+  const result = document.getElementById('promoResult');
+
+  if (!code) {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--error)';
+    msg.textContent = '⚠️ Entre un code de réduction.';
+    result.style.display = 'none';
+    appliedPromo = null;
+    return;
+  }
+
+  const promo = PROMO_CODES[code];
+  if (!promo) {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--error)';
+    msg.textContent = '❌ Code invalide ou expiré.';
+    result.style.display = 'none';
+    appliedPromo = null;
+    updateModalTotal();
+    return;
+  }
+
+  appliedPromo = { code, ...promo };
+  const subtotal = getTotal();
+  const discountAmount = (subtotal * promo.discount / 100);
+  const final = Math.max(0, subtotal - discountAmount);
+
+  msg.style.display = 'block';
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✅ Code appliqué : ' + promo.label;
+
+  document.getElementById('promoSubtotal').textContent = subtotal.toFixed(2) + '€';
+  document.getElementById('promoLabel').textContent = 'Réduction (' + promo.discount + '%)';
+  document.getElementById('promoDiscount').textContent = '-' + discountAmount.toFixed(2) + '€';
+  document.getElementById('promoFinal').textContent = final.toFixed(2) + '€';
+  result.style.display = 'block';
+
+  document.getElementById('modalTotal').textContent = final.toFixed(2) + '€';
+}
+
+function getFinalTotal() {
+  const subtotal = getTotal();
+  if (!appliedPromo) return subtotal;
+  return Math.max(0, subtotal - (subtotal * appliedPromo.discount / 100));
+}
+
+function updateModalTotal() {
+  document.getElementById('modalTotal').textContent = getFinalTotal().toFixed(2) + '€';
+}
 
 // ── PACKS DE COINS ──
 const coinPacks = [
@@ -458,7 +540,13 @@ function openPaymentModal() {
   document.getElementById('modalTotal').textContent=total.toFixed(2)+'€';
   document.getElementById('modalOverlay').classList.add('open');
 }
-function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  appliedPromo = null;
+  document.getElementById('promoInput').value = '';
+  document.getElementById('promoMsg').style.display = 'none';
+  document.getElementById('promoResult').style.display = 'none';
+}
 
 // ── VALIDATION ──
 function chk(id,errId,test){
@@ -489,11 +577,12 @@ async function submitOrder(){
   const email   = document.getElementById('fieldEmail').value.trim();
   const discord = document.getElementById('fieldDiscord').value.trim();
   const pseudo  = document.getElementById('fieldPseudo').value.trim();
-  const total   = getTotal().toFixed(2);
+  const total   = getFinalTotal().toFixed(2);
   const totalCoins = getTotalCoins().toLocaleString('fr-FR');
   const items   = cart.map(c=>`${c.coins.toLocaleString('fr-FR')} Coins x${c.qty} = ${(c.price*c.qty).toFixed(2)}€`).join('\n');
   const date    = new Date().toLocaleString('fr-FR');
 
+  // ── EMAIL ──
   try {
     await emailjs.send(EMAILJS_SVC, EMAILJS_TPL, {
       to_email:    'Loan34j@gmail.com',
@@ -506,11 +595,40 @@ async function submitOrder(){
       total:       total + '€',
       date:        date
     });
-    showToast('📧 Email envoyé avec succès !', '📧');
   } catch(e) {
     console.error('EmailJS:', e);
-    showToast('Erreur envoi email — voir console', '⚠️', true);
   }
+
+  // ── DISCORD WEBHOOK ──
+  try {
+    await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Nebula FA Shop',
+        embeds: [{
+          title: '🛒 Nouvelle Commande — Nebula FA',
+          color: 0xf5c542,
+          fields: [
+            { name: '👤 Client',       value: `${prenom} ${nom}`, inline: true  },
+            { name: '📧 Email',         value: email,              inline: true  },
+            { name: '🎮 Discord ID',    value: `\`${discord}\``,   inline: true  },
+            { name: '🕹️ Pseudo FiveM', value: `\`${pseudo}\``,    inline: true  },
+            { name: '🪙 Commande',      value: `\`\`\`${items}\`\`\``, inline: false },
+            { name: '🪙 Total Coins',   value: `**${totalCoins} NBC**`, inline: true },
+            { name: '💶 Total Payé',    value: `**${total}€**`,    inline: true  },
+            { name: '📅 Date',          value: date,               inline: false },
+          ],
+          footer: { text: 'Nebula FA Boutique • Paiement PayPal' },
+          timestamp: new Date().toISOString()
+        }]
+      })
+    });
+  } catch(e) {
+    console.error('Discord Webhook:', e);
+  }
+
+  showToast('✅ Commande envoyée !', '✅');
 
   setTimeout(()=>{
     window.open(`${PAYPAL_ME}/${total}EUR`, '_blank');
