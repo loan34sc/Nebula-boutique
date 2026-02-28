@@ -302,6 +302,29 @@
       <button class="close-btn" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- ÉCRAN CONFIRMATION PAIEMENT (caché par défaut) -->
+      <div id="modalConfirmScreen" style="display:none;text-align:center;padding:20px 0;">
+        <div style="font-size:3.5rem;margin-bottom:16px;">💸</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;">PayPal ouvert !</div>
+        <div style="color:var(--text2);font-size:.9rem;line-height:1.6;margin-bottom:24px;">
+          Complète ton paiement sur PayPal.<br>
+          Une fois le paiement effectué, clique sur le bouton ci-dessous pour confirmer ta commande.
+        </div>
+        <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);border-radius:12px;padding:16px;margin-bottom:24px;">
+          <div style="font-size:.8rem;color:var(--text2);margin-bottom:6px;">⚠️ Ne ferme pas cette page avant d'avoir confirmé</div>
+          <div style="color:var(--success);font-size:.85rem;font-weight:600;">Après paiement → clique "J'ai payé ✅"</div>
+        </div>
+        <button id="paidBtn" onclick="confirmPaymentDone()" style="width:100%;background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;border:none;padding:16px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:10px;">
+          ✅ J'ai payé — Confirmer ma commande
+        </button>
+        <button onclick="window.open(PAYPAL_ME+'/'+pendingOrder.total+'EUR','_blank')" style="width:100%;background:rgba(0,156,222,.15);color:var(--paypal2);border:1px solid rgba(0,156,222,.3);padding:12px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;">
+          🔄 Rouvrir PayPal
+        </button>
+      </div>
+
+      <!-- CONTENU FORMULAIRE NORMAL -->
+      <div id="modalFormContent">
       <div class="modal-summary">
         <div class="modal-summary-title">Récapitulatif</div>
         <div id="modalItems" style="font-size:.88rem;color:var(--text2);"></div>
@@ -359,6 +382,7 @@
         </div>
       </div>
 
+      </div><!-- end modalFormContent -->
     </div>
     <div class="modal-footer">
       <button class="confirm-btn" id="confirmBtn" onclick="submitOrder()">
@@ -542,10 +566,18 @@ function openPaymentModal() {
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  // Reset promo
   appliedPromo = null;
   document.getElementById('promoInput').value = '';
   document.getElementById('promoMsg').style.display = 'none';
   document.getElementById('promoResult').style.display = 'none';
+  // Reset écrans
+  document.getElementById('modalFormContent').style.display = 'block';
+  document.getElementById('modalConfirmScreen').style.display = 'none';
+  // Reset bouton
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<span style="font-weight:900;">Pay</span><span style="font-style:italic;font-family:serif;">Pal</span>&nbsp;— Confirmer et payer';
 }
 
 // ── VALIDATION ──
@@ -566,21 +598,40 @@ function validateAll(){
 }
 
 // ── SUBMIT ──
+// Stocke les infos en attente de confirmation paiement
+let pendingOrder = null;
+
 async function submitOrder(){
   if(!validateAll()) return;
-  const btn=document.getElementById('confirmBtn');
-  btn.disabled=true;
-  btn.innerHTML='<div class="spin"></div>&nbsp;Envoi en cours...';
 
-  const prenom  = document.getElementById('fieldPrenom').value.trim();
-  const nom     = document.getElementById('fieldNom').value.trim();
-  const email   = document.getElementById('fieldEmail').value.trim();
-  const discord = document.getElementById('fieldDiscord').value.trim();
-  const pseudo  = document.getElementById('fieldPseudo').value.trim();
-  const total   = getFinalTotal().toFixed(2);
-  const totalCoins = getTotalCoins().toLocaleString('fr-FR');
-  const items   = cart.map(c=>`${c.coins.toLocaleString('fr-FR')} Coins x${c.qty} = ${(c.price*c.qty).toFixed(2)}€`).join('\n');
-  const date    = new Date().toLocaleString('fr-FR');
+  // Sauvegarde les infos du formulaire
+  pendingOrder = {
+    prenom:     document.getElementById('fieldPrenom').value.trim(),
+    nom:        document.getElementById('fieldNom').value.trim(),
+    email:      document.getElementById('fieldEmail').value.trim(),
+    discord:    document.getElementById('fieldDiscord').value.trim(),
+    pseudo:     document.getElementById('fieldPseudo').value.trim(),
+    total:      getFinalTotal().toFixed(2),
+    totalCoins: getTotalCoins().toLocaleString('fr-FR'),
+    items:      cart.map(c=>`${c.coins.toLocaleString('fr-FR')} Coins x${c.qty} = ${(c.price*c.qty).toFixed(2)}€`).join('\n'),
+    date:       new Date().toLocaleString('fr-FR')
+  };
+
+  // Ouvre PayPal
+  window.open(`${PAYPAL_ME}/${pendingOrder.total}EUR`, '_blank');
+
+  // Change le modal en écran de confirmation paiement
+  document.getElementById('modalFormContent').style.display = 'none';
+  document.getElementById('modalConfirmScreen').style.display = 'block';
+}
+
+async function confirmPaymentDone(){
+  if (!pendingOrder) return;
+  const btn = document.getElementById('paidBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div>&nbsp;Envoi en cours...';
+
+  const { prenom, nom, email, discord, pseudo, total, totalCoins, items, date } = pendingOrder;
 
   // ── EMAIL ──
   try {
@@ -594,32 +645,34 @@ async function submitOrder(){
       total_coins: totalCoins + ' NBC',
       total:       total + '€',
       date:        date
-    });
+    }, EMAILJS_KEY);
+    console.log('EmailJS OK');
   } catch(e) {
-    console.error('EmailJS:', e);
+    console.error('EmailJS erreur:', e.text || e.message || e);
   }
 
   // ── DISCORD WEBHOOK ──
   try {
     await fetch(DISCORD_WEBHOOK, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: 'Nebula FA Shop',
         embeds: [{
-          title: '🛒 Nouvelle Commande — Nebula FA',
-          color: 0xf5c542,
+          title: '💰 Paiement Confirmé — Nebula FA',
+          color: 0x2ecc71,
           fields: [
-            { name: '👤 Client',       value: `${prenom} ${nom}`, inline: true  },
-            { name: '📧 Email',         value: email,              inline: true  },
-            { name: '🎮 Discord ID',    value: `\`${discord}\``,   inline: true  },
-            { name: '🕹️ Pseudo FiveM', value: `\`${pseudo}\``,    inline: true  },
-            { name: '🪙 Commande',      value: `\`\`\`${items}\`\`\``, inline: false },
-            { name: '🪙 Total Coins',   value: `**${totalCoins} NBC**`, inline: true },
-            { name: '💶 Total Payé',    value: `**${total}€**`,    inline: true  },
-            { name: '📅 Date',          value: date,               inline: false },
+            { name: '👤 Client',        value: `${prenom} ${nom}`, inline: true  },
+            { name: '📧 Email',          value: email,              inline: true  },
+            { name: '🎮 Discord ID',     value: `\`${discord}\``,   inline: true  },
+            { name: '🕹️ Pseudo FiveM',  value: `\`${pseudo}\``,    inline: true  },
+            { name: '🪙 Commande',       value: `\`\`\`${items}\`\`\``, inline: false },
+            { name: '🪙 Total Coins',    value: `**${totalCoins} NBC**`, inline: true },
+            { name: '💶 Total Payé',     value: `**${total}€**`,    inline: true  },
+            { name: '📅 Date',           value: date,               inline: false },
           ],
-          footer: { text: 'Nebula FA Boutique • Paiement PayPal' },
+          footer: { text: 'Nebula FA Boutique • Paiement PayPal ✅' },
           timestamp: new Date().toISOString()
         }]
       })
@@ -628,14 +681,11 @@ async function submitOrder(){
     console.error('Discord Webhook:', e);
   }
 
-  showToast('✅ Commande envoyée !', '✅');
-
-  setTimeout(()=>{
-    window.open(`${PAYPAL_ME}/${total}EUR`, '_blank');
-    closeModal();
-    btn.disabled=false;
-    btn.innerHTML=`<span style="font-weight:900;">Pay</span><span style="font-style:italic;font-family:serif;">Pal</span>&nbsp;— Confirmer et payer`;
-  }, 800);
+  showToast('✅ Merci ! Votre commande a été confirmée !', '✅');
+  pendingOrder = null;
+  cart = [];
+  updateCartUI();
+  closeModal();
 }
 
 // ── TOAST ──
