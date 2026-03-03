@@ -303,24 +303,66 @@
     </div>
     <div class="modal-body">
 
-      <!-- ÉCRAN CONFIRMATION PAIEMENT (caché par défaut) -->
-      <div id="modalConfirmScreen" style="display:none;text-align:center;padding:20px 0;">
-        <div style="font-size:3.5rem;margin-bottom:16px;">💸</div>
-        <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;">PayPal ouvert !</div>
-        <div style="color:var(--text2);font-size:.9rem;line-height:1.6;margin-bottom:24px;">
-          Complète ton paiement sur PayPal.<br>
-          Une fois le paiement effectué, clique sur le bouton ci-dessous pour confirmer ta commande.
+      <!-- ÉCRAN APRÈS PAIEMENT -->
+      <div id="modalConfirmScreen" style="display:none;text-align:center;padding:10px 0;">
+
+        <!-- Étape 1 : PayPal -->
+        <div id="stepPaypal">
+          <div style="font-size:3rem;margin-bottom:12px;">💸</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:8px;">PayPal ouvert !</div>
+          <div style="color:var(--text2);font-size:.88rem;line-height:1.6;margin-bottom:20px;">
+            Complète ton paiement sur PayPal puis reviens ici.
+          </div>
+          <button onclick="goToStep2()" style="width:100%;background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;border:none;padding:14px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1.15rem;font-weight:700;cursor:pointer;margin-bottom:10px;">
+            ✅ J'ai effectué le paiement
+          </button>
+          <button onclick="window.open(PAYPAL_ME+'/'+pendingOrder.total+'EUR','_blank')" style="width:100%;background:rgba(0,156,222,.12);color:var(--paypal2);border:1px solid rgba(0,156,222,.3);padding:11px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;">
+            🔄 Rouvrir PayPal
+          </button>
         </div>
-        <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);border-radius:12px;padding:16px;margin-bottom:24px;">
-          <div style="font-size:.8rem;color:var(--text2);margin-bottom:6px;">⚠️ Ne ferme pas cette page avant d'avoir confirmé</div>
-          <div style="color:var(--success);font-size:.85rem;font-weight:600;">Après paiement → clique "J'ai payé ✅"</div>
+
+        <!-- Étape 2 : Ouvrir ticket Discord -->
+        <div id="stepDiscord" style="display:none;">
+          <div style="font-size:3rem;margin-bottom:12px;">🎟️</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:8px;color:var(--accent2);">Dernière étape !</div>
+          <div style="color:var(--text2);font-size:.88rem;line-height:1.7;margin-bottom:16px;">
+            Pour recevoir tes coins, tu dois ouvrir un <strong style="color:var(--text);">ticket sur notre Discord</strong> et envoyer le <strong style="color:var(--text);">screenshot de ton paiement PayPal</strong>.
+          </div>
+
+          <!-- Instructions visuelles -->
+          <div style="text-align:left;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:.82rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Comment faire :</div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">1</span>
+              <span style="font-size:.85rem;color:var(--text2);">Rejoins notre serveur Discord en cliquant ci-dessous</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">2</span>
+              <span style="font-size:.85rem;color:var(--text2);">Va dans le salon <strong style="color:var(--text);">#créer-un-ticket</strong></span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">3</span>
+              <span style="font-size:.85rem;color:var(--text2);">Ouvre un ticket et envoie le <strong style="color:var(--coin);">screenshot de ton paiement PayPal</strong> 📸</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <span style="background:var(--success);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">✓</span>
+              <span style="font-size:.85rem;color:var(--text2);">Un admin créditera tes coins dès que possible ⚡</span>
+            </div>
+          </div>
+
+          <a href="https://discord.gg/nebulafarp" target="_blank" id="paidBtn"
+            style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+            background:linear-gradient(135deg,#5865f2,#7289da);color:#fff;border:none;padding:15px;
+            border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1.2rem;font-weight:700;
+            cursor:pointer;text-decoration:none;margin-bottom:10px;transition:opacity .2s;"
+            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"
+            onclick="confirmPaymentDone()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            Rejoindre le Discord & Ouvrir un ticket
+          </a>
+          <div style="font-size:.75rem;color:var(--text2);">Tes coins seront crédités sous 24h ⚡</div>
         </div>
-        <button id="paidBtn" onclick="confirmPaymentDone()" style="width:100%;background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;border:none;padding:16px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:10px;">
-          ✅ J'ai payé — Confirmer ma commande
-        </button>
-        <button onclick="window.open(PAYPAL_ME+'/'+pendingOrder.total+'EUR','_blank')" style="width:100%;background:rgba(0,156,222,.15);color:var(--paypal2);border:1px solid rgba(0,156,222,.3);padding:12px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;">
-          🔄 Rouvrir PayPal
-        </button>
+
       </div>
 
       <!-- CONTENU FORMULAIRE NORMAL -->
@@ -359,6 +401,12 @@
         <label class="form-label">Pseudo en jeu (FiveM) *</label>
         <input class="form-input" type="text" id="fieldPseudo" placeholder="Ton pseudo sur le serveur">
         <div class="form-error" id="errPseudo">Ce champ est requis</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">💳 Email PayPal *</label>
+        <input class="form-input" type="email" id="fieldPaypal" placeholder="ton-email@paypal.com">
+        <div style="font-size:.75rem;color:var(--text2);margin-top:4px;">L'email associé à ton compte PayPal</div>
+        <div class="form-error" id="errPaypal">Email PayPal invalide</div>
       </div>
 
       <!-- CODE PROMO -->
@@ -569,11 +617,14 @@ function closeModal() {
   // Reset promo
   appliedPromo = null;
   document.getElementById('promoInput').value = '';
+  document.getElementById('fieldPaypal').value = '';
   document.getElementById('promoMsg').style.display = 'none';
   document.getElementById('promoResult').style.display = 'none';
   // Reset écrans
   document.getElementById('modalFormContent').style.display = 'block';
   document.getElementById('modalConfirmScreen').style.display = 'none';
+  document.getElementById('stepPaypal').style.display = 'block';
+  document.getElementById('stepDiscord').style.display = 'none';
   // Reset bouton
   const btn = document.getElementById('confirmBtn');
   btn.disabled = false;
@@ -594,61 +645,36 @@ function validateAll(){
     chk('fieldEmail','errEmail',v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
     chk('fieldDiscord','errDiscord',v=>v.length>0),
     chk('fieldPseudo','errPseudo',v=>v.length>0),
+    chk('fieldPaypal','errPaypal',v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
   ].every(Boolean);
 }
 
 // ── SUBMIT ──
-// Stocke les infos en attente de confirmation paiement
-let pendingOrder = null;
+// Passe à l'étape 2 (Discord ticket)
+async function goToStep2() {
+  document.getElementById('stepPaypal').style.display = 'none';
+  document.getElementById('stepDiscord').style.display = 'block';
 
-async function submitOrder(){
-  if(!validateAll()) return;
-
-  // Sauvegarde les infos du formulaire
-  pendingOrder = {
-    prenom:     document.getElementById('fieldPrenom').value.trim(),
-    nom:        document.getElementById('fieldNom').value.trim(),
-    email:      document.getElementById('fieldEmail').value.trim(),
-    discord:    document.getElementById('fieldDiscord').value.trim(),
-    pseudo:     document.getElementById('fieldPseudo').value.trim(),
-    total:      getFinalTotal().toFixed(2),
-    totalCoins: getTotalCoins().toLocaleString('fr-FR'),
-    items:      cart.map(c=>`${c.coins.toLocaleString('fr-FR')} Coins x${c.qty} = ${(c.price*c.qty).toFixed(2)}€`).join('\n'),
-    date:       new Date().toLocaleString('fr-FR')
-  };
-
-  // Ouvre PayPal
-  window.open(`${PAYPAL_ME}/${pendingOrder.total}EUR`, '_blank');
-
-  // Change le modal en écran de confirmation paiement
-  document.getElementById('modalFormContent').style.display = 'none';
-  document.getElementById('modalConfirmScreen').style.display = 'block';
-}
-
-async function confirmPaymentDone(){
   if (!pendingOrder) return;
-  const btn = document.getElementById('paidBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spin"></div>&nbsp;Envoi en cours...';
-
-  const { prenom, nom, email, discord, pseudo, total, totalCoins, items, date } = pendingOrder;
+  const { prenom, nom, email, discord, pseudo, paypalEmail, total, totalCoins, items, date } = pendingOrder;
 
   // ── EMAIL ──
   try {
     await emailjs.send(EMAILJS_SVC, EMAILJS_TPL, {
-      to_email:    'Loan34j@gmail.com',
-      from_name:   `${prenom} ${nom}`,
-      from_email:  email,
-      discord_id:  discord,
-      pseudo_jeu:  pseudo,
-      commande:    items,
-      total_coins: totalCoins + ' NBC',
-      total:       total + '€',
-      date:        date
+      to_email:     'Loan34j@gmail.com',
+      from_name:    `${prenom} ${nom}`,
+      from_email:   email,
+      discord_id:   discord,
+      pseudo_jeu:   pseudo,
+      paypal_email: paypalEmail,
+      commande:     items,
+      total_coins:  totalCoins + ' NBC',
+      total:        total + '€',
+      date:         date
     }, EMAILJS_KEY);
     console.log('EmailJS OK');
   } catch(e) {
-    console.error('EmailJS erreur:', e.text || e.message || e);
+    console.error('EmailJS:', e.text || e.message || e);
   }
 
   // ── DISCORD WEBHOOK ──
@@ -660,28 +686,61 @@ async function confirmPaymentDone(){
       body: JSON.stringify({
         username: 'Nebula FA Shop',
         embeds: [{
-          title: '💰 Paiement Confirmé — Nebula FA',
+          title: '💰 Nouveau Paiement — Nebula FA',
           color: 0x2ecc71,
           fields: [
-            { name: '👤 Client',        value: `${prenom} ${nom}`, inline: true  },
-            { name: '📧 Email',          value: email,              inline: true  },
-            { name: '🎮 Discord ID',     value: `\`${discord}\``,   inline: true  },
-            { name: '🕹️ Pseudo FiveM',  value: `\`${pseudo}\``,    inline: true  },
-            { name: '🪙 Commande',       value: `\`\`\`${items}\`\`\``, inline: false },
-            { name: '🪙 Total Coins',    value: `**${totalCoins} NBC**`, inline: true },
-            { name: '💶 Total Payé',     value: `**${total}€**`,    inline: true  },
-            { name: '📅 Date',           value: date,               inline: false },
+            { name: '👤 Client',         value: `${prenom} ${nom}`,  inline: true  },
+            { name: '📧 Email',           value: email,               inline: true  },
+            { name: '🎮 Discord ID',      value: `\`${discord}\``,    inline: true  },
+            { name: '💳 Email PayPal',    value: paypalEmail,         inline: true  },
+            { name: '🕹️ Pseudo FiveM',   value: `\`${pseudo}\``,     inline: true  },
+            { name: '🪙 Commande',        value: `\`\`\`${items}\`\`\``, inline: false },
+            { name: '🪙 Total Coins',     value: `**${totalCoins} NBC**`, inline: true },
+            { name: '💶 Total Payé',      value: `**${total}€**`,     inline: true  },
+            { name: '📅 Date',            value: date,                inline: false },
+            { name: '⚠️ Action requise',  value: '**Créditer les coins dès réception du ticket Discord avec screen PayPal**', inline: false },
           ],
-          footer: { text: 'Nebula FA Boutique • Paiement PayPal ✅' },
+          footer: { text: 'Nebula FA Boutique • Le client ouvre un ticket Discord' },
           timestamp: new Date().toISOString()
         }]
       })
     });
+    console.log('Discord OK');
   } catch(e) {
-    console.error('Discord Webhook:', e);
+    console.error('Discord:', e);
   }
+}
 
-  showToast('✅ Merci ! Votre commande a été confirmée !', '✅');
+// Stocke les infos en attente de confirmation paiement
+let pendingOrder = null;
+
+async function submitOrder(){
+  if(!validateAll()) return;
+
+  // Sauvegarde les infos du formulaire
+  pendingOrder = {
+    prenom:      document.getElementById('fieldPrenom').value.trim(),
+    nom:         document.getElementById('fieldNom').value.trim(),
+    email:       document.getElementById('fieldEmail').value.trim(),
+    discord:     document.getElementById('fieldDiscord').value.trim(),
+    pseudo:      document.getElementById('fieldPseudo').value.trim(),
+    paypalEmail: document.getElementById('fieldPaypal').value.trim(),
+    total:       getFinalTotal().toFixed(2),
+    totalCoins:  getTotalCoins().toLocaleString('fr-FR'),
+    items:       cart.map(c=>`${c.coins.toLocaleString('fr-FR')} Coins x${c.qty} = ${(c.price*c.qty).toFixed(2)}€`).join('\n'),
+    date:        new Date().toLocaleString('fr-FR')
+  };
+
+  // Ouvre PayPal
+  window.open(`${PAYPAL_ME}/${pendingOrder.total}EUR`, '_blank');
+
+  // Change le modal en écran de confirmation paiement
+  document.getElementById('modalFormContent').style.display = 'none';
+  document.getElementById('modalConfirmScreen').style.display = 'block';
+}
+
+function confirmPaymentDone(){
+  showToast('✅ Merci ! Tes coins arrivent bientôt !', '✅');
   pendingOrder = null;
   cart = [];
   updateCartUI();
