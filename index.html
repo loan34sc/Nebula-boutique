@@ -174,6 +174,13 @@
   .spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
     border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 
+  /* ID BADGES */
+  .id-badges{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .id-badge{display:flex;align-items:center;gap:6px;border-radius:8px;padding:8px 12px;font-size:.8rem;font-weight:600;}
+  .id-badge.order{background:rgba(88,101,242,.15);border:1px solid rgba(88,101,242,.4);color:var(--accent2);}
+  .id-badge.shop{background:rgba(245,197,66,.12);border:1px solid rgba(245,197,66,.35);color:var(--coin);}
+  .id-badge .id-val{font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.5px;}
+
   /* TOAST */
   .toast{position:fixed;bottom:30px;right:30px;background:var(--bg3);border:1px solid var(--success);
     border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:10px;
@@ -369,12 +376,36 @@
       <div id="modalFormContent">
       <div class="modal-summary">
         <div class="modal-summary-title">Récapitulatif</div>
+
+        <!-- IDs générés à l'ouverture du modal -->
+        <div class="id-badges" id="modalOrderIDs"></div>
+
         <div id="modalItems" style="font-size:.88rem;color:var(--text2);"></div>
         <div class="modal-summary-total">
           <span style="color:var(--text2);font-size:.88rem;">Total à payer</span>
           <span class="amount" id="modalTotal">0.00€</span>
         </div>
       </div>
+
+      <!-- ── CHAMPS ID UNIQUE + ID BOUTIQUE ── -->
+      <div style="background:rgba(88,101,242,.06);border:1px solid rgba(88,101,242,.2);border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+        <div class="form-label" style="margin-bottom:10px;">🆔 Identifiants</div>
+        <div class="form-row" style="margin-bottom:0;">
+          <div class="form-group half">
+            <label class="form-label">ID FiveM (Unique) *</label>
+            <input class="form-input" type="text" id="fieldOrderID" placeholder="1">
+            <div style="font-size:.72rem;color:var(--text2);margin-top:3px;">Ton identifiant FiveM en jeu</div>
+            <div class="form-error" id="errOrderID">Ce champ est requis</div>
+          </div>
+          <div class="form-group half">
+            <label class="form-label">ID Boutique *</label>
+            <input class="form-input" type="text" id="fieldShopID" placeholder="1">
+            <div style="font-size:.72rem;color:var(--text2);margin-top:3px;">Le code reçu par la boutique</div>
+            <div class="form-error" id="errShopID">Ce champ est requis</div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group half">
           <label class="form-label">Prénom *</label>
@@ -517,12 +548,24 @@ function updateModalTotal() {
   document.getElementById('modalTotal').textContent = getFinalTotal().toFixed(2) + '€';
 }
 
+// ── GÉNÉRATEUR D'IDS ──
+function generateOrderID() {
+  return 'ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+}
+function generateShopID() {
+  return 'NBF-' + Math.random().toString(36).substr(2,6).toUpperCase();
+}
+
 // ── PACKS DE COINS ──
 const coinPacks = [
-  { id:1, coins:600,  price:6,  best:false, desc:'Idéal pour commencer' },
-  { id:2, coins:1200, price:10, best:false, desc:'Le double pour moins cher' },
-  { id:3, coins:3000, price:25, best:false, desc:'Pack intermédiaire populaire' },
-  { id:4, coins:5000, price:40, best:true,  desc:'Maximum de coins, maximum de valeur' },
+  { id:1, coins:1500,  price:15,  bonus:0,    best:false, desc:'Idéal pour débuter ton aventure' },
+  { id:2, coins:2600,  price:25,  bonus:100,  best:false, desc:'+100 coins offerts' },
+  { id:3, coins:3800,  price:35,  bonus:300,  best:false, desc:'+300 coins offerts' },
+  { id:4, coins:5600,  price:50,  bonus:600,  best:false, desc:'+600 coins offerts' },
+  { id:5, coins:7300,  price:65,  bonus:800,  best:false, desc:'+800 coins offerts' },
+  { id:6, coins:10500, price:90,  bonus:1500, best:false, desc:'+1500 coins offerts' },
+  { id:7, coins:13000, price:110, bonus:2000, best:true,  desc:'+2000 coins offerts' },
+  { id:8, coins:28000, price:220, bonus:6000, best:false, desc:'+6000 coins offerts' },
 ];
 
 let cart = [];
@@ -536,6 +579,7 @@ function renderCoins() {
         <div class="coin-icon">🪙</div>
         <div class="coin-amount">${p.coins.toLocaleString('fr-FR')}</div>
         <div class="coin-label-text">Nebula Coins</div>
+        ${p.bonus > 0 ? `<div style="background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4);color:#2ecc71;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;position:relative;z-index:1;">+${p.bonus.toLocaleString('fr-FR')} BONUS 🎁</div>` : ''}
       </div>
       <div class="coin-card-bottom">
         <div class="coin-price">${p.price}<span>€</span></div>
@@ -602,22 +646,32 @@ function closeCart() { document.getElementById('cartOverlay').classList.remove('
 // ── MODAL ──
 function openPaymentModal() {
   closeCart();
-  const total=getTotal();
+
+  // ── Affiche les badges vides (remplis par l'utilisateur) ──
+  document.getElementById('fieldOrderID').value = '';
+  document.getElementById('fieldShopID').value  = '';
+  document.getElementById('modalOrderIDs').innerHTML = '';
+
+  // Récap articles
+  const total = getTotal();
   document.getElementById('modalItems').innerHTML = cart.map(c=>
     `<div style="display:flex;justify-content:space-between;padding:3px 0;">
       <span>🪙 ${c.coins.toLocaleString('fr-FR')} Coins ×${c.qty}</span>
       <span style="color:var(--coin)">${(c.price*c.qty).toFixed(2)}€</span>
     </div>`).join('')
     + `<div style="font-size:.78rem;color:var(--text2);margin-top:6px;">= ${getTotalCoins().toLocaleString('fr-FR')} coins au total</div>`;
-  document.getElementById('modalTotal').textContent=total.toFixed(2)+'€';
+  document.getElementById('modalTotal').textContent = total.toFixed(2)+'€';
   document.getElementById('modalOverlay').classList.add('open');
 }
+
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   // Reset promo
   appliedPromo = null;
   document.getElementById('promoInput').value = '';
   document.getElementById('fieldPaypal').value = '';
+  document.getElementById('fieldOrderID').value = '';
+  document.getElementById('fieldShopID').value = '';
   document.getElementById('promoMsg').style.display = 'none';
   document.getElementById('promoResult').style.display = 'none';
   // Reset écrans
@@ -640,6 +694,8 @@ function chk(id,errId,test){
 }
 function validateAll(){
   return [
+    chk('fieldOrderID','errOrderID',v=>v.length>0),
+    chk('fieldShopID','errShopID',v=>v.length>0),
     chk('fieldPrenom','errPrenom',v=>v.length>0),
     chk('fieldNom','errNom',v=>v.length>0),
     chk('fieldEmail','errEmail',v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
@@ -656,12 +712,14 @@ async function goToStep2() {
   document.getElementById('stepDiscord').style.display = 'block';
 
   if (!pendingOrder) return;
-  const { prenom, nom, email, discord, pseudo, paypalEmail, total, totalCoins, items, date } = pendingOrder;
+  const { orderID, shopID, prenom, nom, email, discord, pseudo, paypalEmail, total, totalCoins, items, date } = pendingOrder;
 
   // ── EMAIL ──
   try {
     await emailjs.send(EMAILJS_SVC, EMAILJS_TPL, {
       to_email:     'Loan34j@gmail.com',
+      order_id:     orderID,
+      shop_id:      shopID,
       from_name:    `${prenom} ${nom}`,
       from_email:   email,
       discord_id:   discord,
@@ -689,7 +747,9 @@ async function goToStep2() {
           title: '💰 Nouveau Paiement — Nebula FA',
           color: 0x2ecc71,
           fields: [
-            { name: '👤 Client',         value: `${prenom} ${nom}`,  inline: true  },
+            { name: '🆔 ID Commande',      value: `\`${orderID}\``,    inline: true  },
+            { name: '🏪 ID Boutique',       value: `\`${shopID}\``,     inline: true  },
+            { name: '👤 Client',            value: `${prenom} ${nom}`,  inline: true  },
             { name: '📧 Email',           value: email,               inline: true  },
             { name: '🎮 Discord ID',      value: `\`${discord}\``,    inline: true  },
             { name: '💳 Email PayPal',    value: paypalEmail,         inline: true  },
@@ -717,8 +777,14 @@ let pendingOrder = null;
 async function submitOrder(){
   if(!validateAll()) return;
 
+  // Récupère les IDs saisis par le joueur
+  const orderID  = document.getElementById('fieldOrderID').value.trim();
+  const shopID   = document.getElementById('fieldShopID').value.trim();
+
   // Sauvegarde les infos du formulaire
   pendingOrder = {
+    orderID,
+    shopID,
     prenom:      document.getElementById('fieldPrenom').value.trim(),
     nom:         document.getElementById('fieldNom').value.trim(),
     email:       document.getElementById('fieldEmail').value.trim(),
